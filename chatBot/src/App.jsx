@@ -5,6 +5,7 @@ import planetIcon from "./assets/3.png";
 import botIcon from "./assets/4.png";
 import sendIcon from "./assets/send.png";
 import axios from "axios";
+import "./index.css";
 
 export default function App() {
   const messagesEndRef = useRef(null);
@@ -43,6 +44,7 @@ export default function App() {
     if (textMessage.trim()) {
       setMessages([...messages, { text: textMessage, isUser: true }]);
       setTextMessage("");
+      setLoading(true);
 
       try {
         const response = await axios.post(
@@ -64,9 +66,10 @@ export default function App() {
         );
 
         const aiResponse = response.data.candidates[0].content.parts[0].text;
+        const formattedResponse = parseResponse(aiResponse);
         setMessages((prevMessages) => [
           ...prevMessages,
-          { text: aiResponse, isUser: false },
+          { text: formattedResponse, isUser: false, isHtml: true },
         ]);
       } catch (error) {
         console.log(error);
@@ -82,6 +85,17 @@ export default function App() {
     setTextMessage("");
   };
 
+  const parseResponse = (text) => {
+    text = text.replace(/\*\*(.*?)\*\*/gim, '<h2>$1</h2>');
+    text = text.replace(/`(.*?)`/gim, '<code>$1</code>');
+    text = text.replace(/```(.*?)```/gs, (match, p1) => {
+      return `<pre><code>${p1.replace(/\n/g, '<br>')}</code></pre>`;
+    });
+    text = text.replace(/\n/gim, '<br>');
+    text = text.replace(/\n\n/gim, '<p></p>');
+    return text.trim();
+  };
+
   useEffect(() => {
     if (messagesEndRef.current) {
       messagesEndRef.current.scrollIntoView({ behavior: "smooth" });
@@ -90,39 +104,32 @@ export default function App() {
 
   return (
     <>
-      <div className="min-h-screen w-full bg-black text-white flex flex-col items-center justify-center p-4 ">
+      <div className="min-h-screen w-full bg-black text-white flex flex-col items-center justify-center p-4 hide-scrollbar">
         {isChat ? (
           <>
-            <div className=" ">
-              <div className="bg-gray-600 p-4 rounded-full flex items-center justify-between w-full">
-                <h1
-                  className="text-4xl cursor-pointer"
-                  onClick={() => setIsChat(false)}
-                >
-                  AssistMe
-                </h1>
-                <button
-                  onClick={handleNewChat}
-                  className="bg-[#181818] rounded-full text-sm sm:text-base p-4"
-                >
-                  New Chat
-                </button>
-              </div>
-
-              <div className=" w-full flex flex-col items-center justify-start p-4 overflow-y-auto max-h-[70vh]">
+            <div className="rounded-full flex items-center justify-between w-full">
+              <h1 className="text-4xl cursor-pointer" onClick={() => setIsChat(false)}>
+                AssistMe
+              </h1>
+              <button
+                onClick={handleNewChat}
+                className="bg-[#181818] rounded-full text-sm sm:text-base p-4"
+              >
+                New Chat
+              </button>
+            </div>
+            <div className="w-full min-h-[70vh]">
+              <div className="w-full flex flex-col items-center justify-start p-4 hide-scrollbar overflow-y-auto max-h-[70vh]">
                 {messages.map((message, index) => (
-                  <div
-                    key={index}
-                    className={`flex ${
-                      message.isUser ? "justify-end" : "justify-start"
-                    } w-full mb-4`}
-                  >
+                  <div key={index} className={`flex ${message.isUser ? "justify-end" : "justify-start"} w-full mb-4`}>
                     <div
-                      className={`flex ${
-                        message.isUser ? "bg-blue-500" : "bg-[#181818]"
-                      } p-2 rounded-xl max-w-[80%] break-words`}
+                      className={`flex ${message.isUser ? "bg-blue-500" : "bg-[#181818]"} p-2 rounded-xl max-w-[80%] break-words`}
                     >
-                      <p className="text-left p-3">{message.text}</p>
+                      {message.isHtml ? (
+                        <div className="text-left p-3" dangerouslySetInnerHTML={{ __html: message.text }} />
+                      ) : (
+                        <p className="text-left p-3">{message.text}</p>
+                      )}
                     </div>
                   </div>
                 ))}
@@ -138,32 +145,20 @@ export default function App() {
             </div>
           </>
         ) : (
-          <div className="flex flex-col items-center justify-center w-full max-w-6xl mb-16 sm:mb-24 ">
-            <h1 className="text-4xl sm:text-5xl text-center mb-8 sm:mb-16">
-              AssistMe
-            </h1>
+          <div className="flex flex-col items-center justify-center w-full max-w-6xl mb-16 sm:mb-24">
+            <h1 className="text-4xl sm:text-5xl text-center mb-8 sm:mb-16">AssistMe</h1>
             <div className="flex gap-2 mt-8 sm:mt-16 flex-wrap items-center justify-center w-full">
               {data.map((item) => (
-                <div
-                  key={item.id}
-                  className="bg-[#181818] p-4 rounded-lg relative h-36 w-full sm:w-48 flex-shrink-0"
-                >
+                <div key={item.id} className="bg-[#181818] p-4 rounded-lg relative h-36 w-full sm:w-48 flex-shrink-0">
                   <p>{item.text}</p>
-                  <img
-                    src={item.icon}
-                    alt=""
-                    className="absolute right-3 bottom-3"
-                  />
+                  <img src={item.icon} alt="" className="absolute right-3 bottom-3" />
                 </div>
               ))}
             </div>
           </div>
         )}
 
-        <form
-          className="w-full max-w-4xl flex items-center bg-[#181818] p-4  rounded-full"
-          onSubmit={handleSend}
-        >
+        <form className="w-full max-w-4xl flex items-center bg-[#181818] p-4 rounded-full" onSubmit={handleSend}>
           <input
             value={textMessage}
             onChange={(e) => setTextMessage(e.target.value)}
@@ -179,8 +174,7 @@ export default function App() {
         </form>
 
         <p className="text-center text-[#808080] mt-3 text-xs sm:text-sm">
-          AssistMe is developed by Muhammad Attique. This AI uses the Gemini API
-          for giving responses.
+          AssistMe is developed by Muhammad Attique. This AI uses the Gemini API for giving responses.
         </p>
       </div>
     </>

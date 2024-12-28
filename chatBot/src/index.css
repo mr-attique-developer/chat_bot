@@ -9,3 +9,9 @@ body{
     font-family: "Outfit", serif;
     font-weight: 300;
 }
+body::-webkit-scrollbar {
+    display: none; 
+  }
+.hide-scrollbar::-webkit-scrollbar {
+    scrollbar-width: none;
+  }
